@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:zephyr/config/global/global_setting.dart';
 import 'package:zephyr/main.dart';
 import 'package:zephyr/util/context/context_extensions.dart';
@@ -16,6 +17,17 @@ Future<void> showReaderSettingsSheet(
   BuildContext context, {
   required ValueChanged<int> changePageIndex,
 }) {
+  if (!kIsWeb && Platform.isIOS) {
+    return CupertinoScaffold.showCupertinoModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      expand: false,
+      builder: (context) {
+        return _ReaderSettingsSheet(changePageIndex: changePageIndex);
+      },
+    );
+  }
+
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

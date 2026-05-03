@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import 'package:zephyr/type/enum.dart';
@@ -199,7 +201,7 @@ class ComicSimplifyEntry extends StatelessWidget {
         final width = constraints.maxWidth;
         final height = width / 0.75;
 
-        return GestureDetector(
+        final entry = GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
             final onTapHandler = onTapOverride;
@@ -225,6 +227,24 @@ class ComicSimplifyEntry extends StatelessWidget {
             child: _buildCoverWithTitle(width, height),
           ),
         );
+        if (Platform.isIOS && type != ComicEntryType.normal) {
+          return CupertinoContextMenu(
+            actions: [
+              CupertinoContextMenuAction(
+                trailingIcon: CupertinoIcons.delete,
+                isDestructiveAction: true,
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.of(context).pop();
+                  _handleDeleteAction(context);
+                },
+                child: const Text('删除记录'),
+              ),
+            ],
+            child: entry,
+          );
+        }
+        return entry;
       },
     );
   }

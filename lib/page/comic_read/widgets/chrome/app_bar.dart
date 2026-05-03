@@ -1,10 +1,13 @@
 import 'dart:ui';
+import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zephyr/page/comic_read/cubit/reader_cubit.dart';
 import 'package:zephyr/page/comments/widgets/title.dart';
 import 'package:zephyr/util/context/context_extensions.dart';
+import 'package:zephyr/widgets/ios/sf_symbol_icon.dart';
 
 class ComicReadAppBar extends StatelessWidget {
   final String title;
@@ -43,7 +46,19 @@ class ComicReadAppBar extends StatelessWidget {
               child: AppBar(
                 title: ScrollableTitle(text: title),
                 titleSpacing: 6,
-                backgroundColor: colorScheme.surface.withValues(alpha: 0.78),
+                leading: Platform.isIOS
+                    ? IconButton(
+                        icon: const SfSymbolIcon(
+                          'chevron.backward',
+                          fallback: CupertinoIcons.chevron_back,
+                        ),
+                        onPressed: () => Navigator.of(context).maybePop(),
+                      )
+                    : null,
+                backgroundColor: Platform.isIOS
+                    ? Colors.black.withValues(alpha: 0.28)
+                    : colorScheme.surface.withValues(alpha: 0.78),
+                foregroundColor: Platform.isIOS ? Colors.white : null,
                 surfaceTintColor: Colors.transparent,
                 elevation: isMenuVisible ? 4.0 : 0.0,
                 shadowColor: Colors.black.withValues(alpha: 0.2),

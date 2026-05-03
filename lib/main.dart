@@ -19,6 +19,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_socks_proxy/socks_proxy.dart';
 import 'package:logger/logger.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
@@ -614,6 +615,9 @@ class _MyAppState extends State<MyApp> with WindowListener, TrayListener {
                 ],
               );
             }
+            if (Platform.isIOS) {
+              return CupertinoScaffold(body: content);
+            }
             return content;
           },
           locale: globalSettingState.locale,
@@ -630,6 +634,10 @@ class _MyAppState extends State<MyApp> with WindowListener, TrayListener {
             GlobalCupertinoLocalizations.delegate,
           ],
           theme: ThemeData.light().copyWith(
+            platform: Platform.isIOS
+                ? TargetPlatform.iOS
+                : ThemeData.light().platform,
+            useMaterial3: true,
             primaryColor: lightColorScheme.primary,
             colorScheme: lightColorScheme,
             scaffoldBackgroundColor: lightColorScheme.surface,
@@ -639,20 +647,80 @@ class _MyAppState extends State<MyApp> with WindowListener, TrayListener {
             dialogTheme: DialogThemeData(
               backgroundColor: lightColorScheme.surfaceContainer,
             ),
-            textTheme: withLinuxFont(ThemeData.light().textTheme),
-            primaryTextTheme: withLinuxFont(ThemeData.light().primaryTextTheme),
+            textTheme: Platform.isIOS
+                ? _iosTextTheme(ThemeData.light().textTheme)
+                : withLinuxFont(ThemeData.light().textTheme),
+            primaryTextTheme: Platform.isIOS
+                ? _iosTextTheme(ThemeData.light().primaryTextTheme)
+                : withLinuxFont(ThemeData.light().primaryTextTheme),
+            appBarTheme: Platform.isIOS
+                ? AppBarTheme(
+                    centerTitle: true,
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    backgroundColor: lightColorScheme.surface.withValues(
+                      alpha: 0.86,
+                    ),
+                    foregroundColor: lightColorScheme.onSurface,
+                    surfaceTintColor: Colors.transparent,
+                  )
+                : null,
           ),
           darkTheme: ThemeData.dark().copyWith(
+            platform: Platform.isIOS
+                ? TargetPlatform.iOS
+                : ThemeData.dark().platform,
+            useMaterial3: true,
             scaffoldBackgroundColor: globalSettingState.isAMOLED
                 ? Colors.black
                 : darkColorScheme.surface,
             tabBarTheme: TabBarThemeData(dividerColor: Colors.transparent),
             colorScheme: darkColorScheme,
-            textTheme: withLinuxFont(ThemeData.dark().textTheme),
-            primaryTextTheme: withLinuxFont(ThemeData.dark().primaryTextTheme),
+            textTheme: Platform.isIOS
+                ? _iosTextTheme(ThemeData.dark().textTheme)
+                : withLinuxFont(ThemeData.dark().textTheme),
+            primaryTextTheme: Platform.isIOS
+                ? _iosTextTheme(ThemeData.dark().primaryTextTheme)
+                : withLinuxFont(ThemeData.dark().primaryTextTheme),
+            appBarTheme: Platform.isIOS
+                ? AppBarTheme(
+                    centerTitle: true,
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    backgroundColor: darkColorScheme.surface.withValues(
+                      alpha: 0.86,
+                    ),
+                    foregroundColor: darkColorScheme.onSurface,
+                    surfaceTintColor: Colors.transparent,
+                  )
+                : null,
           ),
         );
       },
     );
   }
+}
+
+TextTheme _iosTextTheme(TextTheme base) {
+  return base.apply(
+    fontFamily: '.SF Pro Text',
+    displayColor: base.bodyLarge?.color,
+    bodyColor: base.bodyLarge?.color,
+  ).copyWith(
+    displayLarge: base.displayLarge?.copyWith(fontFamily: '.SF Pro Display'),
+    displayMedium: base.displayMedium?.copyWith(fontFamily: '.SF Pro Display'),
+    displaySmall: base.displaySmall?.copyWith(fontFamily: '.SF Pro Display'),
+    headlineLarge: base.headlineLarge?.copyWith(
+      fontFamily: '.SF Pro Display',
+      fontWeight: FontWeight.w700,
+    ),
+    headlineMedium: base.headlineMedium?.copyWith(
+      fontFamily: '.SF Pro Display',
+      fontWeight: FontWeight.w700,
+    ),
+    headlineSmall: base.headlineSmall?.copyWith(
+      fontFamily: '.SF Pro Display',
+      fontWeight: FontWeight.w700,
+    ),
+  );
 }

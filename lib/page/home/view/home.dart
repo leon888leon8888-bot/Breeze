@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zephyr/cubit/plugin_registry_cubit.dart';
 import 'package:zephyr/network/http/plugin/unified_comic_dto.dart';
@@ -10,6 +13,7 @@ import 'package:zephyr/page/search_result/bloc/search_bloc.dart';
 import 'package:zephyr/plugin/plugin_registry_service.dart';
 import 'package:zephyr/util/json/json_value.dart';
 import 'package:zephyr/util/router/router.gr.dart';
+import 'package:zephyr/widgets/ios/sf_symbol_icon.dart';
 import 'package:zephyr/widgets/toast.dart';
 
 import 'home_scheme_renderer.dart';
@@ -30,26 +34,63 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 600;
+    final isIos = Platform.isIOS;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("发现"),
+        toolbarHeight: isIos ? 88 : null,
+        title: isIos
+            ? Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '发现',
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              )
+            : const Text("发现"),
         actions: [
           IconButton(
             tooltip: '搜索',
-            icon: const Icon(Icons.search),
-            onPressed: search,
+            icon: SfSymbolIcon(
+              'magnifyingglass',
+              fallback: Icons.search,
+            ),
+            onPressed: () {
+              if (isIos) {
+                HapticFeedback.selectionClick();
+              }
+              search();
+            },
           ),
           if (isDesktop) ...[
             IconButton(
               tooltip: '下载任务',
-              icon: const Icon(Icons.download_outlined),
-              onPressed: () => context.pushRoute(DownloadTaskRoute()),
+              icon: const SfSymbolIcon(
+                'arrow.down.circle',
+                fallback: Icons.download_outlined,
+              ),
+              onPressed: () {
+                if (isIos) {
+                  HapticFeedback.selectionClick();
+                }
+                context.pushRoute(DownloadTaskRoute());
+              },
             ),
             IconButton(
               tooltip: '全局设置',
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () => context.pushRoute(GlobalSettingRoute()),
+              icon: const SfSymbolIcon(
+                'gearshape',
+                fallback: Icons.settings_outlined,
+              ),
+              onPressed: () {
+                if (isIos) {
+                  HapticFeedback.selectionClick();
+                }
+                context.pushRoute(GlobalSettingRoute());
+              },
             ),
             const SizedBox(width: 8),
           ] else

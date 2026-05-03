@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:toastification/toastification.dart';
@@ -15,6 +17,7 @@ import 'package:zephyr/util/memory/memory_overlay_widget.dart';
 import 'package:zephyr/util/notice.dart';
 import 'package:zephyr/util/router/router.gr.dart';
 import 'package:zephyr/util/update/check_update.dart';
+import 'package:zephyr/widgets/ios/sf_symbol_icon.dart';
 import 'package:zephyr/widgets/toast.dart';
 
 import '../main.dart';
@@ -39,6 +42,7 @@ class NavigationBar extends StatefulWidget {
 class _NavigationBarState extends State<NavigationBar> {
   // _controller 用于控制手机底部导航栏和页面切换
   late PersistentTabController _controller;
+  late CupertinoTabController _iosController;
   // _selectedIndex 用于控制平板侧边导航栏和页面切换
   int _selectedIndex = 0;
   final debouncer = Debouncer(milliseconds: 100);
@@ -72,6 +76,7 @@ class _NavigationBarState extends State<NavigationBar> {
       _buildPageList(globalSetting.oldPageRollbackEnabled).length,
     );
     _controller = PersistentTabController(initialIndex: initialIndex);
+    _iosController = CupertinoTabController(initialIndex: initialIndex);
     _selectedIndex = initialIndex;
     initForegroundTask();
 
@@ -105,6 +110,7 @@ class _NavigationBarState extends State<NavigationBar> {
   @override
   void dispose() {
     _controller.dispose();
+    _iosController.dispose();
     super.dispose();
   }
 
@@ -129,6 +135,9 @@ class _NavigationBarState extends State<NavigationBar> {
       updateInterval: Duration(seconds: 1),
       child: Builder(
         builder: (context) {
+          if (Platform.isIOS) {
+            return _buildIosLayout(pageList: pageList);
+          }
           if (isTablet(context) ||
               Platform.isWindows ||
               Platform.isLinux ||
@@ -168,6 +177,40 @@ class _NavigationBarState extends State<NavigationBar> {
           _selectedIndex = index;
         });
       },
+    );
+  }
+
+  Widget _buildIosLayout({required List<Widget> pageList}) {
+    final colorScheme = context.theme.colorScheme;
+    return CupertinoTabScaffold(
+      controller: _iosController,
+      backgroundColor: context.backgroundColor,
+      tabBar: CupertinoTabBar(
+        currentIndex: _selectedIndex,
+        activeColor: colorScheme.primary,
+        inactiveColor: CupertinoColors.inactiveGray,
+        backgroundColor: CupertinoColors.systemBackground.withValues(
+          alpha: 0.72,
+        ),
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            width: 0.5,
+          ),
+        ),
+        items: _iosNavBarItems(
+          context.watch<GlobalSettingCubit>().state.oldPageRollbackEnabled,
+        ),
+        onTap: (index) {
+          HapticFeedback.selectionClick();
+          setState(() {
+            _selectedIndex = index;
+            _controller.index = index;
+          });
+        },
+      ),
+      tabBuilder: (context, index) =>
+          CupertinoTabView(builder: (context) => pageList[index]),
     );
   }
 
@@ -236,6 +279,43 @@ class _NavigationBarState extends State<NavigationBar> {
         title: "排行",
         activeColorPrimary: activeColor,
         inactiveColorPrimary: inactiveColor,
+      ),
+      ...items,
+    ];
+  }
+
+  List<BottomNavigationBarItem> _iosNavBarItems(bool oldPageRollbackEnabled) {
+    const items = <BottomNavigationBarItem>[
+      BottomNavigationBarItem(
+        icon: SfSymbolIcon('book', fallback: CupertinoIcons.book),
+        activeIcon: SfSymbolIcon('book.fill', fallback: CupertinoIcons.book),
+        label: "书架",
+      ),
+      BottomNavigationBarItem(
+        icon: SfSymbolIcon('safari', fallback: CupertinoIcons.compass),
+        activeIcon: SfSymbolIcon(
+          'safari.fill',
+          fallback: CupertinoIcons.compass,
+        ),
+        label: "发现",
+      ),
+    ];
+    if (!oldPageRollbackEnabled) {
+      return items;
+    }
+    return const [
+      BottomNavigationBarItem(
+        icon: SfSymbolIcon('house', fallback: CupertinoIcons.house),
+        activeIcon: SfSymbolIcon('house.fill', fallback: CupertinoIcons.house),
+        label: "首页",
+      ),
+      BottomNavigationBarItem(
+        icon: SfSymbolIcon('chart.bar', fallback: CupertinoIcons.chart_bar),
+        activeIcon: SfSymbolIcon(
+          'chart.bar.fill',
+          fallback: CupertinoIcons.chart_bar,
+        ),
+        label: "排行",
       ),
       ...items,
     ];

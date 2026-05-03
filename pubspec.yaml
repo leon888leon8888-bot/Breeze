@@ -22,6 +22,8 @@ dependencies:
 
   # UI 组件与交互
   cupertino_icons: ^1.0.8 # UI: iOS 风格图标
+  sf_symbols: ^0.2.0 # UI: iOS 原生 SF Symbols
+  modal_bottom_sheet: ^3.0.0 # UI: iOS 风格层叠 Bottom Sheet
   dynamic_color: ^1.7.0 # UI: 动态取色
   loading_animation_widget: ^1.2.1 # UI: 加载动画合集
   toggle_switch: ^2.3.0 # UI: 多段开关

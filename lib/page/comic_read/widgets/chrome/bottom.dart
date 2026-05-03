@@ -1,8 +1,12 @@
 import 'dart:ui';
+import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:uuid/uuid.dart';
 import 'package:zephyr/cubit/string_select.dart';
 import 'package:zephyr/page/comic_info/comic_info.dart';
@@ -13,6 +17,7 @@ import 'package:zephyr/page/comic_read/widgets/settings/reader_settings_sheet.da
 import 'package:zephyr/util/router/router.dart';
 import 'package:zephyr/util/router/router.gr.dart';
 import 'package:zephyr/type/enum.dart';
+import 'package:zephyr/widgets/ios/sf_symbol_icon.dart';
 
 class BottomWidget extends StatefulWidget {
   final ComicEntryType type;
@@ -70,6 +75,9 @@ class _BottomWidgetState extends State<BottomWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (Platform.isIOS) {
+      return _buildIosHud(context);
+    }
     final isMenuVisible = context.select(
       (ReaderCubit cubit) => cubit.state.isMenuVisible,
     );
@@ -168,6 +176,116 @@ class _BottomWidgetState extends State<BottomWidget> {
     );
   }
 
+  Widget _buildIosHud(BuildContext context) {
+    final isMenuVisible = context.select(
+      (ReaderCubit cubit) => cubit.state.isMenuVisible,
+    );
+    final bottomSafeHeight = context.bottomSafeHeight;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final maxWidth = (screenWidth - 24).clamp(320.0, 720.0).toDouble();
+
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        ignoring: !isMenuVisible,
+        child: AnimatedSlide(
+          duration: _animationDuration,
+          curve: Curves.easeOutCubic,
+          offset: isMenuVisible ? Offset.zero : const Offset(0, 1),
+          child: AnimatedOpacity(
+            duration: _animationDuration,
+            opacity: isMenuVisible ? 1 : 0,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomSafeHeight),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.42),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.12),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _IosHudButton(
+                                    symbolName: 'backward.end.fill',
+                                    fallbackIcon:
+                                        CupertinoIcons.backward_end_fill,
+                                    tooltip: '上一章',
+                                    enabled: jumpChapter.havePrev,
+                                    onPressed: () => _jumpToChapter(true),
+                                  ),
+                                  _IosHudButton(
+                                    symbolName: 'house.fill',
+                                    fallbackIcon: CupertinoIcons.house_fill,
+                                    tooltip: '返回首页',
+                                    onPressed: () {
+                                      HapticFeedback.lightImpact();
+                                      popToRoot(context);
+                                    },
+                                  ),
+                                  _IosHudButton(
+                                    symbolName: 'list.bullet',
+                                    fallbackIcon: CupertinoIcons.list_bullet,
+                                    tooltip: '章节',
+                                    enabled: chapterRefs.isNotEmpty,
+                                    onPressed: _selectJumpChapter,
+                                  ),
+                                  _IosHudButton(
+                                    symbolName: 'slider.horizontal.3',
+                                    fallbackIcon:
+                                        CupertinoIcons.slider_horizontal_3,
+                                    tooltip: '阅读设置',
+                                    onPressed: _openSettingsPanel,
+                                  ),
+                                  _IosHudButton(
+                                    symbolName: 'forward.end.fill',
+                                    fallbackIcon:
+                                        CupertinoIcons.forward_end_fill,
+                                    tooltip: '下一章',
+                                    enabled: jumpChapter.haveNext,
+                                    onPressed: () => _jumpToChapter(false),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              IconTheme(
+                                data: const IconThemeData(color: Colors.white),
+                                child: DefaultTextStyle(
+                                  style: const TextStyle(color: Colors.white),
+                                  child: Row(children: [widget.sliderWidget]),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openSettingsPanel() {
     final readerCubit = context.read<ReaderCubit>();
     showReaderSettingsSheet(
@@ -212,6 +330,9 @@ class _BottomWidgetState extends State<BottomWidget> {
   }
 
   Future<void> _jumpToChapter(bool isPrev) async {
+    if (Platform.isIOS) {
+      HapticFeedback.lightImpact();
+    }
     final dialogMessage = isPrev ? '上一章' : '下一章';
     final result = await _bottomButtonDialog(
       context,
@@ -224,25 +345,37 @@ class _BottomWidgetState extends State<BottomWidget> {
   }
 
   Future<void> _selectJumpChapter() async {
+    if (Platform.isIOS) {
+      HapticFeedback.lightImpact();
+    }
     final router = AutoRouter.of(context);
-    final result = await showDialog<int?>(
-      context: context,
-      barrierDismissible: false, // 不允许点击外部区域关闭对话框
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('选择章节'),
-          content: SingleChildScrollView(child: _epSelector(context)),
-          actions: [
-            TextButton(
-              child: Text('取消'),
-              onPressed: () {
-                context.pop();
-              },
+    final result = Platform.isIOS
+        ? await CupertinoScaffold.showCupertinoModalBottomSheet<int?>(
+            context: context,
+            backgroundColor: Colors.transparent,
+            builder: (context) => _IosChapterSheet(
+              chapters: chapterRefs,
+              onSelected: (order) => Navigator.of(context).pop(order),
             ),
-          ],
-        );
-      },
-    );
+          )
+        : await showDialog<int?>(
+            context: context,
+            barrierDismissible: false, // 不允许点击外部区域关闭对话框
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('选择章节'),
+                content: SingleChildScrollView(child: _epSelector(context)),
+                actions: [
+                  TextButton(
+                    child: Text('取消'),
+                    onPressed: () {
+                      context.pop();
+                    },
+                  ),
+                ],
+              );
+            },
+          );
     if (result != null && mounted) {
       router.replace(
         ComicReadRoute(
@@ -269,6 +402,123 @@ class _BottomWidgetState extends State<BottomWidget> {
                 Navigator.of(context, rootNavigator: false).pop(ep.order),
           ),
       ],
+    );
+  }
+}
+
+class _IosChapterSheet extends StatelessWidget {
+  final List<UnifiedComicChapterRef> chapters;
+  final ValueChanged<int> onSelected;
+
+  const _IosChapterSheet({
+    required this.chapters,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
+    return SafeArea(
+      top: false,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '选择章节',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: chapters.length,
+                  separatorBuilder: (context, index) => Divider(
+                    height: 1,
+                    indent: 20,
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                  itemBuilder: (context, index) {
+                    final chapter = chapters[index];
+                    return ListTile(
+                      title: Text(chapter.name),
+                      trailing: const SfSymbolIcon(
+                        'chevron.forward',
+                        fallback: CupertinoIcons.chevron_forward,
+                        size: 16,
+                      ),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        onSelected(chapter.order);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IosHudButton extends StatelessWidget {
+  final String symbolName;
+  final IconData fallbackIcon;
+  final String tooltip;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  const _IosHudButton({
+    required this.symbolName,
+    required this.fallbackIcon,
+    required this.tooltip,
+    this.enabled = true,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      minSize: 42,
+      onPressed: enabled
+          ? () {
+              HapticFeedback.selectionClick();
+              onPressed();
+            }
+          : null,
+      child: SfSymbolIcon(
+        symbolName,
+        fallback: fallbackIcon,
+        color: enabled
+            ? Colors.white
+            : Colors.white.withValues(alpha: 0.32),
+        size: 22,
+        semanticLabel: tooltip,
+      ),
     );
   }
 }

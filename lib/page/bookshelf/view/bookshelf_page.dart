@@ -1,12 +1,17 @@
+import 'dart:io';
+
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zephyr/cubit/plugin_registry_cubit.dart';
 import 'package:zephyr/page/bookshelf/bookshelf.dart' hide SearchEnter;
 import 'package:zephyr/page/bookshelf/service/favorite_folder_service.dart';
 import 'package:zephyr/plugin/plugin_registry_service.dart';
 import 'package:zephyr/util/context/context_extensions.dart';
+import 'package:zephyr/widgets/ios/sf_symbol_icon.dart';
 
 @RoutePage()
 class BookshelfPage extends StatelessWidget {
@@ -64,6 +69,7 @@ class _BookshelfPageContentState extends State<_BookshelfPageContent>
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 600;
+    final isIos = Platform.isIOS;
 
     return BlocListener<PluginRegistryCubit, Map<String, PluginRuntimeState>>(
       listenWhen: (previous, current) =>
@@ -75,8 +81,11 @@ class _BookshelfPageContentState extends State<_BookshelfPageContent>
       },
       child: Scaffold(
         appBar: AppBar(
+          toolbarHeight: isIos ? 96 : null,
           titleSpacing: isDesktop ? 16 : 8,
-          title: isDesktop ? _buildDesktopHeader() : _buildMobileHeader(),
+          title: isIos
+              ? _buildIosHeader()
+              : (isDesktop ? _buildDesktopHeader() : _buildMobileHeader()),
         ),
         body: TabBarView(
           controller: _tabController,
@@ -96,6 +105,50 @@ class _BookshelfPageContentState extends State<_BookshelfPageContent>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildIosHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '书架',
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            _buildSleekTabs(),
+            const Spacer(),
+            IconButton(
+              tooltip: '搜索',
+              icon: const SfSymbolIcon(
+                'magnifyingglass',
+                fallback: CupertinoIcons.search,
+              ),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                setState(() => _isSearchExpanded = true);
+              },
+            ),
+            IconButton(
+              tooltip: '筛选',
+              icon: const SfSymbolIcon(
+                'slider.horizontal.3',
+                fallback: CupertinoIcons.slider_horizontal_3,
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _openFilter();
+              },
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -262,6 +315,9 @@ class _BookshelfPageContentState extends State<_BookshelfPageContent>
 
   void _onTabChanged(int index) {
     if (index == _currentIndex) return;
+    if (Platform.isIOS) {
+      HapticFeedback.selectionClick();
+    }
     _tabController.animateTo(index);
   }
 
